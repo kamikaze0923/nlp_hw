@@ -61,7 +61,7 @@ def pad_collate(batch):
     xx_pad_reverse = to_device(pad_sequence(xx_rev, batch_first=True, padding_value=PAD_INPUT_WORD_IDX), args)# 0 for 'unk' and 1 for 'pad'
     yy_pad = to_device(pad_sequence(yy, batch_first=True, padding_value=EOS_VALUE), args) # 0 for 'SOS' and 1 for 'EOS'
 
-    return xx_pad, xx_pad_reverse, yy_pad, torch.LongTensor(x_lens) # only LongTensor can be used for index selection, x_lens needs to be on cpu
+    return xx_pad, xx_pad_reverse, yy_pad, to_device(torch.LongTensor(x_lens), args)
 
 def routine_loss(logits, label, criterion=CrossEntropyLoss()):
     """

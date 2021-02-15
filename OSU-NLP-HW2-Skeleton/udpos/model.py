@@ -66,8 +66,9 @@ class Bidirectional_LSTM_Encoder(torch.nn.Module):
         h_0_rev = self.h_0_rev.unsqueeze(1).expand(-1, batch_size, -1) # add batch dimension and repeat, L x B x HD
         c_0_rev = self.c_0_rev.unsqueeze(1).expand(-1, batch_size, -1) # add batch dimension and repeat, L x B x HD
 
-        x_pack = pack_padded_sequence(xx_emb, x_lens, batch_first=True, enforce_sorted=False)
-        x_rev_pack = pack_padded_sequence(xx_rev_emb, x_lens, batch_first=True, enforce_sorted=False)
+        x_pack = pack_padded_sequence(xx_emb, x_lens.to('cpu'), batch_first=True, enforce_sorted=False)
+        # in pack_padded_sequence, the x_lens needs to be on cpu
+        x_rev_pack = pack_padded_sequence(xx_rev_emb, x_lens.to('cpu'), batch_first=True, enforce_sorted=False)
         x_out, (h_t, _) = self.lstm_1(x_pack, (h_0, c_0))
         x_out_rev, (h_t_rev, _) = self.lstm_2(x_rev_pack, (h_0_rev, c_0_rev))
 
