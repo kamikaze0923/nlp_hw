@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from udpos.dataset import create_torch_UDPOS_dataset_and_embedding_layer, EOS_VALUE, PAD_INPUT_WORD_IDX
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -7,7 +10,6 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 import argparse
 import os
-import matplotlib.pyplot as plt
 
 
 
@@ -124,5 +126,5 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     print(vars(args))
     torch.manual_seed(args.seed)
-    main(args)
+
 
