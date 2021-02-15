@@ -55,10 +55,10 @@ class Glove_Embedding_Layer(torch.nn.Module):
 
     def __init__(self, embedding_tensor):
         super().__init__()
-        embedding_tensor = torch.FloatTensor(embedding_tensor)
-        unk_parameter = torch.nn.Parameter(torch.zeros(size=(1, embedding_tensor.size()[1])))
-        pad_tensor = - torch.ones(size=(1, embedding_tensor.size()[1]))
-        self.layer_matrix = torch.cat([unk_parameter, pad_tensor, embedding_tensor])
+        self.embedding_tensor = torch.nn.Parameter(torch.FloatTensor(embedding_tensor), requires_grad=False)
+        self.unk_parameter = torch.nn.Parameter(torch.zeros(size=(1, self.embedding_tensor.size()[1])), requires_grad=True)
+        self.pad_tensor = torch.nn.Parameter(- torch.ones(size=(1, self.embedding_tensor.size()[1])), requires_grad=False)
+        self.layer_matrix = torch.cat([self.unk_parameter, self.pad_tensor, self.embedding_tensor])
         print("Embedding Layer Created with size {}".format(self.layer_matrix.size()))
 
     def forward(self, idx):
@@ -74,7 +74,7 @@ class POS_Embedding_Layer(torch.nn.Module):
     def __init__(self, tag_dict):
         super().__init__()
         n_tags = len(tag_dict)
-        self.layer_matrix = torch.FloatTensor(torch.eye(n_tags))
+        self.layer_matrix = torch.nn.Parameter(torch.FloatTensor(torch.eye(n_tags)), requires_grad=False)
         torch.nn.init.orthogonal_(self.layer_matrix)
 
     def forward(self, idx):

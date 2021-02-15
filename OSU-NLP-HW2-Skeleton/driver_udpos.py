@@ -15,15 +15,15 @@ matplotlib.use('Agg')
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch-size', type=int, default=200,
                     help='Batch size.')
-parser.add_argument('--epochs', type=int, default=100,
+parser.add_argument('--epochs', type=int, default=3,
                     help='Number of training epochs.')
 parser.add_argument('--learning-rate', type=float, default=1e-3,
                     help='Learning rate.')
-parser.add_argument('--hidden-dim', type=int, default=256,
+parser.add_argument('--hidden-dim', type=int, default=32,
                     help='Number of hidden units in transition MLP.')
 parser.add_argument('--lstm-layers', type=int, default=1,
                     help='Number of hidden units in transition MLP.')
-parser.add_argument('--embedding-dim', type=int, default=100,
+parser.add_argument('--embedding-dim', type=int, default=50,
                     help='Dimensionality of embedding.')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Disable CUDA training.')
@@ -47,11 +47,11 @@ def pad_collate(batch):
     x_lens = [len(x) for x in xx]
     xx_rev = [torch.flip(x, dims=(0,)) for x in xx]
 
-    xx_pad = pad_sequence(xx, batch_first=True, padding_value=PAD_INPUT_WORD_IDX)# 0 for 'unk' and 1 for 'pad'
-    xx_pad_reverse = pad_sequence(xx_rev, batch_first=True, padding_value=PAD_INPUT_WORD_IDX)# 0 for 'unk' and 1 for 'pad'
-    yy_pad = pad_sequence(yy, batch_first=True, padding_value=EOS_VALUE) # 0 for 'SOS' and 1 for 'EOS'
+    xx_pad = to_device(pad_sequence(xx, batch_first=True, padding_value=PAD_INPUT_WORD_IDX), args)# 0 for 'unk' and 1 for 'pad'
+    xx_pad_reverse = to_device(pad_sequence(xx_rev, batch_first=True, padding_value=PAD_INPUT_WORD_IDX), args)# 0 for 'unk' and 1 for 'pad'
+    yy_pad = to_device(pad_sequence(yy, batch_first=True, padding_value=EOS_VALUE), args) # 0 for 'SOS' and 1 for 'EOS'
 
-    return to_device(xx_pad, args), to_device(xx_pad_reverse, args), to_device(yy_pad, args), to_device(torch.LongTensor(x_lens), args) # only LongTensor can be used for index selection
+    return xx_pad, xx_pad_reverse, yy_pad, to_device(torch.LongTensor(x_lens), args) # only LongTensor can be used for index selection
 
 def routine_loss(logits, label, criterion=CrossEntropyLoss()):
     """
@@ -78,18 +78,17 @@ def routine(dataloader, model, optimizer=None):
         if optimizer:
             optimizer.zero_grad()
             out = model(batch)
-            loss = routine_loss(out, yy_pad[:,1:])
+            loss = routine_loss(out, yy_pad[:,1:])# match labels except <SOS>
             loss.backward()
             optimizer.step()
 
         else:
             with torch.no_grad():
                 out = model(batch)
-                loss = routine_loss(out, yy_pad[:, 1:])
+                loss = routine_loss(out, yy_pad[:, 1:])# match labels except <SOS>
 
         avg_loss += loss.item() * batch_size
         n_exmaple += batch_size
-    print("")
     return avg_loss / n_exmaple
 
 
@@ -123,6 +122,7 @@ def main(args):
         train_loss_buffer.append(train_loss)
         validate_loss_buffer.append(test_loss)
         torch.save(pos_model.state_dict(), os.path.join(args.save_folder, hyper_parameters, "ckpt_{}.pt".format(e)))
+        # print("Unk embedding {}".format(pos_model.encoder.word_embedding_layer.unk_parameter))
 
     plt.plot(train_loss_buffer)
     plt.plot(validate_loss_buffer)
