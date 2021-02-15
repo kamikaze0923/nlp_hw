@@ -113,14 +113,15 @@ def main(args):
     pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer)
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
+    device = 'cuda:0' if args.cuda else 'cpu'
     for name, param in pos_model.named_parameters(): # move everything to GPU here
-        param.to('cuda:0' if args.cuda else 'cpu')
-        print(param.device)
+        param = param.to(device)
         if param.requires_grad:
-            print(f"need gradient {name}")
+            print(f"need gradient on {device} {name}")
         else:
-            print(f"does not need gradient {name}")
+            print(f"does not need gradient {device} {name}")
     exit(0)
+
     train_loss_buffer = []
     validate_loss_buffer = []
 
