@@ -2,6 +2,7 @@ from udpos.dataset import create_torch_UDPOS_dataset_and_embedding_layer, EOS_VA
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from udpos.model import POS_from_WordSeq
+from udpos.utils import to_device
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
@@ -11,6 +12,33 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch-size', type=int, default=200,
+                    help='Batch size.')
+parser.add_argument('--epochs', type=int, default=100,
+                    help='Number of training epochs.')
+parser.add_argument('--learning-rate', type=float, default=1e-3,
+                    help='Learning rate.')
+parser.add_argument('--hidden-dim', type=int, default=256,
+                    help='Number of hidden units in transition MLP.')
+parser.add_argument('--lstm-layers', type=int, default=1,
+                    help='Number of hidden units in transition MLP.')
+parser.add_argument('--embedding-dim', type=int, default=100,
+                    help='Dimensionality of embedding.')
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='Disable CUDA training.')
+parser.add_argument('--seed', type=int, default=42,
+                    help='Random seed (default: 42).')
+parser.add_argument('--save-folder', type=str,
+                    default='checkpoints',
+                    help='Path to checkpoints.')
+
+args = parser.parse_args()
+args.cuda = not args.no_cuda and torch.cuda.is_available()
+if args.cuda:
+    print("Using GPU")
+else:
+    print("Using CPU")
 
 
 # Function to enable batch loader to concatenate binary strings of different lengths and pad them
@@ -23,7 +51,7 @@ def pad_collate(batch):
     xx_pad_reverse = pad_sequence(xx_rev, batch_first=True, padding_value=PAD_INPUT_WORD_IDX)# 0 for 'unk' and 1 for 'pad'
     yy_pad = pad_sequence(yy, batch_first=True, padding_value=EOS_VALUE) # 0 for 'SOS' and 1 for 'EOS'
 
-    return xx_pad, xx_pad_reverse, yy_pad, torch.LongTensor(x_lens) # only LongTensor can be used for index selection
+    return to_device(xx_pad, args), to_device(xx_pad_reverse, args), to_device(yy_pad, args), to_device(torch.LongTensor(x_lens), args) # only LongTensor can be used for index selection
 
 def routine_loss(logits, label, criterion=CrossEntropyLoss()):
     """
@@ -76,9 +104,8 @@ def main(args):
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
     for name, param in pos_model.named_parameters():
-        param.to('cuda:0' if args.cuda else 'cpu')
-        # if param.requires_grad:
-        #     print(name)
+        if param.requires_grad:
+            print(name)
 
     train_loss_buffer = []
     validate_loss_buffer = []
@@ -106,35 +133,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch-size', type=int, default=200,
-                        help='Batch size.')
-    parser.add_argument('--epochs', type=int, default=100,
-                        help='Number of training epochs.')
-    parser.add_argument('--learning-rate', type=float, default=1e-3,
-                        help='Learning rate.')
-    parser.add_argument('--hidden-dim', type=int, default=256,
-                        help='Number of hidden units in transition MLP.')
-    parser.add_argument('--lstm-layers', type=int, default=1,
-                        help='Number of hidden units in transition MLP.')
-    parser.add_argument('--embedding-dim', type=int, default=100,
-                        help='Dimensionality of embedding.')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='Disable CUDA training.')
-    parser.add_argument('--seed', type=int, default=42,
-                        help='Random seed (default: 42).')
-    parser.add_argument('--save-folder', type=str,
-                        default='checkpoints',
-                        help='Path to checkpoints.')
-
-    args = parser.parse_args()
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
-    if args.cuda:
-        print("Using GPU")
-    else:
-        print("Using CPU")
     print(vars(args))
     torch.manual_seed(args.seed)
-
     main(args)
 

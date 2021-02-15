@@ -22,3 +22,9 @@ def one_hot_vector(categories, hot_index):
     one_hot = torch.zeros(size=(categories, ), dtype=torch.float32)
     one_hot[hot_index] = 1
     return one_hot
+
+def to_device(tensor, args):
+    if args.cuda:
+        return tensor.to("cuda:0")
+    else:
+        return tensor.to("cpu")
