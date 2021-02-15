@@ -56,9 +56,9 @@ class Glove_Embedding_Layer(torch.nn.Module):
     def __init__(self, embedding_tensor):
         super().__init__()
         self.unk_parameter = torch.nn.Parameter(torch.zeros(size=(1, embedding_tensor.size()[1])), requires_grad=True)
-        pad_tensor = torch.nn.Parameter(-torch.ones(size=(1, embedding_tensor.size()[1])), requires_grad=False)
-        embedding_tensor = torch.nn.Parameter(torch.FloatTensor(embedding_tensor), requires_grad=False)
-        self.layer_matrix = torch.cat([self.unk_parameter, pad_tensor, embedding_tensor])
+        self.pad_tensor = torch.nn.Parameter(-torch.ones(size=(1, embedding_tensor.size()[1])), requires_grad=False)
+        self.embedding_tensor = torch.nn.Parameter(torch.FloatTensor(embedding_tensor), requires_grad=False)
+        self.layer_matrix = torch.cat([self.unk_parameter, self.pad_tensor, self.embedding_tensor])
         print("Embedding Layer Created with size {}".format(self.layer_matrix.size()))
 
     def forward(self, idx):
