@@ -12,17 +12,17 @@ import matplotlib
 matplotlib.use('Agg')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch-size', type=int, default=600,
+parser.add_argument('--batch-size', type=int, default=500,
                     help='Batch size.')
-parser.add_argument('--epochs', type=int, default=100,
+parser.add_argument('--epochs', type=int, default=200,
                     help='Number of training epochs.')
 parser.add_argument('--learning-rate', type=float, default=1e-4,
                     help='Learning rate.')
-parser.add_argument('--hidden-dim', type=int, default=512,
+parser.add_argument('--hidden-dim', type=int, default=64,
                     help='Number of hidden units in LSTM.')
 parser.add_argument('--lstm-layers', type=int, default=1,
                     help='Number of hidden units in LSTM.')
-parser.add_argument('--embedding-dim', type=int, default=200,
+parser.add_argument('--embedding-dim', type=int, default=50,
                     help='Dimensionality of embedding.')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Disable CUDA training.')
@@ -63,32 +63,41 @@ def pad_collate(batch):
 
     return xx_pad, xx_pad_reverse, yy_pad, to_device(torch.LongTensor(x_lens), args)
 
-def routine_loss(logits, label, criterion=CrossEntropyLoss()):
+def routine_loss(logits, label, x_lens, criterion=CrossEntropyLoss()):
     """
     :param logits: B x T x TD(tag dimension)
     :param label: B x T
+    :param x_lens: B (word/speech tag length)
     :param criterion: the pytorch CrossEntropyLoss
     :return: a single loss tensor
     """
     B, T, TD = logits.size()
-    return criterion(logits.reshape(-1, TD), label.flatten())
+    loss = criterion(logits.reshape(-1, TD), label.flatten())
+    pred_label = logits.argmax(dim=-1)
+    n_tag, correct_tag = 0, 0
+    for i, l in enumerate(x_lens):
+        n_tag += l + 1
+        valid_pred, valid_label = pred_label[i,:l+1], label[i,:l+1]
+        correct_tag += torch.sum(torch.tensor(valid_label == valid_pred))
+    return loss, correct_tag / n_tag
 
 
 def routine(dataloader, model, optimizer=None):
 
     avg_loss = 0
+    avg_acc = 0
     n_exmaple = 0
     for i, batch in enumerate(dataloader):
         print("\r {}/{} batch is training/validating with batch size {} ".format(
             i, dataloader.__len__(), dataloader.batch_size), end="", flush=True
         )
-        _, _, yy_pad, _ = batch
+        _, _, yy_pad, x_lens = batch
         batch_size = yy_pad.size()[0]
 
         if optimizer:
             optimizer.zero_grad()
             out = model(batch)
-            loss = routine_loss(out, yy_pad[:,1:])# match labels except <SOS>
+            loss, accuracy = routine_loss(out, yy_pad[:,1:], x_lens)# match labels except <SOS>
             loss.backward()
             # model.encoder.word_embedding_layer.pad_tensor.grad = None
             # model.encoder.word_embedding_layer.embedding_tensor.grad = None
@@ -96,11 +105,12 @@ def routine(dataloader, model, optimizer=None):
         else:
             with torch.no_grad():
                 out = model(batch)
-                loss = routine_loss(out, yy_pad[:, 1:])# match labels except <SOS>
+                loss, accuracy = routine_loss(out, yy_pad[:, 1:], x_lens)# match labels except <SOS>
 
         avg_loss += loss.item() * batch_size
+        avg_acc += accuracy
         n_exmaple += batch_size
-    return avg_loss / n_exmaple
+    return avg_loss / n_exmaple, avg_acc / n_exmaple
 
 
 def main(args):
@@ -122,6 +132,8 @@ def main(args):
 
     train_loss_buffer = []
     validate_loss_buffer = []
+    train_acc_buffer = []
+    validate_acc_buffer = []
 
     training_info = f"{args.batch_size}-{args.epochs}-{args.learning_rate}"
     model_info = f"{args.hidden_dim}-{args.lstm_layers}-{args.embedding_dim}"
@@ -130,21 +142,35 @@ def main(args):
     os.makedirs(os.path.join(args.save_folder, hyper_parameters), exist_ok=True)
     for e in range(args.epochs):
         print("Epoch: {}".format(e))
-        train_loss = routine(train_loader, pos_model, optimizer=adam_opt)
-        test_loss = routine(valid_loader, pos_model, optimizer=None)
-        print("Epoch train loss: {:.3f}, test loss: {:.3f}".format(train_loss, test_loss))
+        train_loss, train_acc = routine(train_loader, pos_model, optimizer=adam_opt)
+        valid_loss, valid_acc = routine(valid_loader, pos_model, optimizer=None)
+        print("Epoch train loss: {:.3f}, train acc: {:.3f}, test loss: {:.3f}, test acc: {:.3f}".format(
+            train_loss, valid_loss, train_acc, valid_acc)
+        )
         train_loss_buffer.append(train_loss)
-        validate_loss_buffer.append(test_loss)
+        validate_loss_buffer.append(valid_loss)
+        train_acc_buffer.append(train_acc)
+        validate_acc_buffer.append(valid_acc)
+
         torch.save(pos_model.state_dict(), os.path.join(args.save_folder, hyper_parameters, "ckpt_{}.pt".format(e)))
         # print("Unk embedding {}".format(pos_model.encoder.word_embedding_layer.unk_parameter))
 
-    test_loss = routine(test_loader, pos_model, optimizer=None)
+    test_loss, test_acc = routine(test_loader, pos_model, optimizer=None)
+
     plt.plot(train_loss_buffer)
     plt.plot(validate_loss_buffer)
     plt.scatter(args.epochs - 1, test_loss, marker="^", c='k')
     plt.xticks([i for i in range(args.epochs)])
     plt.legend(["Train_loss", "Valid_loss", "Test_loss"])
     plt.savefig("loss.png")
+    plt.close()
+
+    plt.plot(train_acc_buffer)
+    plt.plot(validate_acc_buffer)
+    plt.scatter(args.epochs - 1, test_acc, marker="^", c='k')
+    plt.xticks([i for i in range(args.epochs)])
+    plt.legend(["Train_acc", "Valid_acc", "Test_acc"])
+    plt.savefig("accuracy.png")
     plt.close()
 
 
