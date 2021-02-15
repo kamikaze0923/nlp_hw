@@ -119,7 +119,6 @@ def main(args):
             print(f"need gradient on {param.device} {name}")
         else:
             print(f"does not need gradient {param.device} {name}")
-    exit(0)
 
     train_loss_buffer = []
     validate_loss_buffer = []
