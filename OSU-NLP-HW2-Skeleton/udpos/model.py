@@ -144,7 +144,7 @@ class Bidirectional_LSTM_Cell_Decoder(torch.nn.Module):
                 word_logits[i, :] = one_hot_vector(self.input_size, EOS_VALUE)
 
             word_label = torch.argmax(word_logits, dim=1, keepdim=True) # B x (ED x 2) -> B (in categories)
-            eq_flag = torch.eq(word_label, 1) # contruct 1 tensor on same device
+            eq_flag = torch.eq(word_label, 1) # construct 1 tensor on same device
             if torch.any(eq_flag):
                 for i, _ in zip(*torch.where(eq_flag)): # eq_flag is in B x 1
                     end_sentence.add(i.item())
