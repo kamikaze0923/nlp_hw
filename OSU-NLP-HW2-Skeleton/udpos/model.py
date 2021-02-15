@@ -126,7 +126,7 @@ class Bidirectional_LSTM_Cell_Decoder(torch.nn.Module):
         :return: a stacking tensor for each step's probability distribution over all speech tag labels B x L x TD
         """
         batch_size = len(x_lens)
-        sos = torch.index_select(yy_pad, dim=1, index=torch.tensor([0]))# B x L
+        sos = yy_pad[:,[0]]# B x L
         c_0 = self.c_0.unsqueeze(1).expand(-1, batch_size, -1) # add batch dimension and repeat, L x B x HD
         c_0_rev = self.c_0_rev.unsqueeze(1).expand(-1, batch_size, -1) # add batch dimension and repeat, L x B x HD
 
