@@ -3,7 +3,6 @@ from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from udpos.model import POS_from_WordSeq
 import torch
-from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 import argparse
 import os
@@ -63,7 +62,7 @@ def pad_collate(batch):
 
     return xx_pad, xx_pad_reverse, yy_pad, to_device(torch.LongTensor(x_lens), args)
 
-def routine_loss(logits, label, x_lens, criterion=CrossEntropyLoss()):
+def routine_loss(logits, label, x_lens, criterion=torch.nn.BCELoss(reduction='none')):
     """
     :param logits: B x T x TD(tag dimension)
     :param label: B x T
@@ -71,9 +70,12 @@ def routine_loss(logits, label, x_lens, criterion=CrossEntropyLoss()):
     :param criterion: the pytorch CrossEntropyLoss
     :return: a single loss tensor
     """
-    B, T, TD = logits.size()
-    loss = criterion(logits.reshape(-1, TD), label.flatten())
-    pred_label = logits.argmax(dim=-1)
+    pred_label = logits.argmax(dim=-1, keepdim=True)
+    label_one_hot = torch.zeros(size=logits.size(), device=pred_label.device)
+    for b, label_seq in enumerate(pred_label):
+        for t, label in enumerate(label_seq):
+            label_one_hot[b,t,label] = 1
+    loss = criterion(logits, label_one_hot).sum(dim=(1,2)).mean()
     n_tag, correct_tag = 0, 0
     for i, l in enumerate(x_lens):
         n_tag += l + 1
