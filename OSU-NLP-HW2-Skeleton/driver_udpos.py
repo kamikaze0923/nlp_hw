@@ -110,16 +110,15 @@ def main(args):
     valid_loader = DataLoader(datasets[1], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
     test_loader = DataLoader(datasets[2], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
 
-    pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer)
+    device = 'cuda:0' if args.cuda else 'cpu'
+    pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer).to(device)
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
-    device = 'cuda:0' if args.cuda else 'cpu'
     for name, param in pos_model.named_parameters(): # move everything to GPU here
-        param = param.to(device)
         if param.requires_grad:
-            print(f"need gradient on {device} {name}")
+            print(f"need gradient on {param.device} {name}")
         else:
-            print(f"does not need gradient {device} {name}")
+            print(f"does not need gradient {param.device} {name}")
     exit(0)
 
     train_loss_buffer = []
