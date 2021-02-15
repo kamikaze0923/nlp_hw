@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 from udpos.dataset import create_torch_UDPOS_dataset_and_embedding_layer, EOS_VALUE, PAD_INPUT_WORD_IDX
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -10,6 +7,9 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 import argparse
 import os
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 
 
@@ -72,7 +72,7 @@ def main(args):
     valid_loader = DataLoader(datasets[1], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
     test_loader = DataLoader(datasets[2], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
 
-    pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer)
+    pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer).to('cuda:0' if args.cuda else 'cpu')
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
     train_loss_buffer = []
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch-size', type=int, default=200,
                         help='Batch size.')
-    parser.add_argument('--epochs', type=int, default=50,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='Number of training epochs.')
     parser.add_argument('--learning-rate', type=float, default=1e-3,
                         help='Learning rate.')
@@ -124,7 +124,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
+    if args.cuda:
+        print("Using GPU")
+    else:
+        print("Using CPU")
     print(vars(args))
     torch.manual_seed(args.seed)
 
+    main(args)
 
