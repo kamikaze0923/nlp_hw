@@ -78,7 +78,8 @@ def routine_loss(logits, label, x_lens, criterion=CrossEntropyLoss()):
     for i, l in enumerate(x_lens):
         n_tag += l + 1
         valid_pred, valid_label = pred_label[i,:l+1], label[i,:l+1]
-        correct_tag += torch.sum(torch.tensor(valid_label == valid_pred))
+        flag = torch.eq(valid_label, valid_pred)
+        correct_tag += torch.sum(flag)
     return loss, correct_tag / n_tag
 
 
