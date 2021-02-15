@@ -71,11 +71,13 @@ def routine_loss(logits, label, x_lens, criterion=torch.nn.BCELoss(reduction='no
     :return: a single loss tensor
     """
     pred_label = logits.argmax(dim=-1, keepdim=True)
-    label_one_hot = torch.zeros(size=logits.size(), device=pred_label.device)
+    pred_label_one_hot = torch.zeros(size=logits.size(), device=pred_label.device)
     for b, label_seq in enumerate(pred_label):
-        for t, label in enumerate(label_seq):
-            label_one_hot[b,t,label] = 1
-    loss = criterion(logits, label_one_hot).sum(dim=(1,2)).mean()
+        for t, l in enumerate(label_seq):
+            pred_label_one_hot[b,t,l] = 1
+    loss = criterion(logits, pred_label_one_hot).sum(dim=(1,2)).mean()
+
+    pred_label = pred_label.squeeze()
     n_tag, correct_tag = 0, 0
     for i, l in enumerate(x_lens):
         n_tag += l + 1
