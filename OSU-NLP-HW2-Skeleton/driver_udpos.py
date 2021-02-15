@@ -113,7 +113,7 @@ def routine(dataloader, model, optimizer=None):
                 loss, accuracy = routine_loss(out, yy_pad[:, 1:], x_lens)# match labels except <SOS>
 
         avg_loss += loss.item() * batch_size
-        avg_acc += accuracy
+        avg_acc += accuracy * batch_size
         n_exmaple += batch_size
     return avg_loss / n_exmaple, avg_acc / n_exmaple
 
