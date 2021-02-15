@@ -23,8 +23,13 @@ def one_hot_vector(categories, hot_index):
     one_hot[hot_index] = 1
     return one_hot
 
-def to_device(tensor, args):
+def to_device(foo, args):
+    """
+    :param foo: could be torch.tensor or torch.nn.Module (anything can use .to to move the GPU/CPU)
+    :param args: use args.cuda to move the foo
+    :return: moved foo
+    """
     if args.cuda:
-        return tensor.to("cuda:0")
+        return foo.to("cuda:0") # coulde be torhc
     else:
-        return tensor.to("cpu")
+        return foo.to("cpu")

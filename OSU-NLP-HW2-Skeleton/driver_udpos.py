@@ -99,6 +99,8 @@ def main(args):
     valid_loader = DataLoader(datasets[1], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
     test_loader = DataLoader(datasets[2], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
 
+    word_embedding_layer = to_device(word_embedding_layer, args)
+    tag_embedding_layer = to_device(tag_embedding_layer, args)
     pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer).to('cuda:0' if args.cuda else 'cpu')
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
