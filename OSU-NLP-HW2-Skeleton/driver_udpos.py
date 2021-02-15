@@ -149,7 +149,7 @@ def main(args):
         print("Epoch: {}".format(e))
         train_loss, train_acc = routine(train_loader, pos_model, optimizer=adam_opt)
         valid_loss, valid_acc = routine(valid_loader, pos_model, optimizer=None)
-        print("Epoch train loss: {:.3f}, train acc: {:.3f}, test loss: {:.3f}, test acc: {:.3f}".format(
+        print("Epoch train loss: {:.5f}, train acc: {:.3f}, test loss: {:.5f}, test acc: {:.3f}".format(
             train_loss, valid_loss, train_acc, valid_acc)
         )
         train_loss_buffer.append(train_loss)
