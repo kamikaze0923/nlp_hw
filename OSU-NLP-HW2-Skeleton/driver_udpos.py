@@ -75,6 +75,11 @@ def main(args):
     pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer).to('cuda:0' if args.cuda else 'cpu')
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
+    for name, param in pos_model.named_parameters():
+        param.to('cuda:0' if args.cuda else 'cpu')
+        # if param.requires_grad:
+        #     print(name)
+
     train_loss_buffer = []
     validate_loss_buffer = []
 
