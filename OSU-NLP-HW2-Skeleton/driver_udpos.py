@@ -12,17 +12,17 @@ import matplotlib
 matplotlib.use('Agg')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch-size', type=int, default=20,
+parser.add_argument('--batch-size', type=int, default=200,
                     help='Batch size.')
 parser.add_argument('--epochs', type=int, default=100,
                     help='Number of training epochs.')
 parser.add_argument('--learning-rate', type=float, default=1e-3,
                     help='Learning rate.')
-parser.add_argument('--hidden-dim', type=int, default=32,
-                    help='Number of hidden units in transition MLP.')
+parser.add_argument('--hidden-dim', type=int, default=256,
+                    help='Number of hidden units in LSTM.')
 parser.add_argument('--lstm-layers', type=int, default=1,
-                    help='Number of hidden units in transition MLP.')
-parser.add_argument('--embedding-dim', type=int, default=50,
+                    help='Number of hidden units in LSTM.')
+parser.add_argument('--embedding-dim', type=int, default=100,
                     help='Dimensionality of embedding.')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Disable CUDA training.')
