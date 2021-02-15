@@ -77,7 +77,7 @@ class UDPOS_pytoch_dataset(Dataset):
         :param np_embedding_dict: the dictionary maps words in corpus to its index of the embedding array
         :param tag_label: the dictionary maps speech tags to its index
         """
-        self.data = udpos_data
+        self.data = udpos_data[:200]
         self.np_embedding_word2idx = np_embedding_word2idx
         self.tag_label = tag_label
 

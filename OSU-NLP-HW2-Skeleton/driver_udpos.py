@@ -2,7 +2,6 @@ from udpos.dataset import create_torch_UDPOS_dataset_and_embedding_layer, EOS_VA
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from udpos.model import POS_from_WordSeq
-from udpos.utils import to_device
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
@@ -15,15 +14,15 @@ matplotlib.use('Agg')
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch-size', type=int, default=200,
                     help='Batch size.')
-parser.add_argument('--epochs', type=int, default=3,
+parser.add_argument('--epochs', type=int, default=100,
                     help='Number of training epochs.')
 parser.add_argument('--learning-rate', type=float, default=1e-3,
                     help='Learning rate.')
-parser.add_argument('--hidden-dim', type=int, default=32,
+parser.add_argument('--hidden-dim', type=int, default=256,
                     help='Number of hidden units in transition MLP.')
 parser.add_argument('--lstm-layers', type=int, default=1,
                     help='Number of hidden units in transition MLP.')
-parser.add_argument('--embedding-dim', type=int, default=50,
+parser.add_argument('--embedding-dim', type=int, default=100,
                     help='Dimensionality of embedding.')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Disable CUDA training.')
@@ -43,6 +42,17 @@ else:
 
 # Function to enable batch loader to concatenate binary strings of different lengths and pad them
 def pad_collate(batch):
+    def to_device(foo, args):
+        """
+        :param foo: could be torch.tensor or torch.nn.Module (anything can use .to to move the GPU/CPU)
+        :param args: use args.cuda to move the foo
+        :return: moved foo
+        """
+        if args.cuda:
+            return foo.to("cuda:0") # coulde be torhc
+        else:
+            return foo.to("cpu")
+
     (xx, yy) = zip(*batch)
     x_lens = [len(x) for x in xx]
     xx_rev = [torch.flip(x, dims=(0,)) for x in xx]
@@ -99,14 +109,15 @@ def main(args):
     valid_loader = DataLoader(datasets[1], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
     test_loader = DataLoader(datasets[2], batch_size=args.batch_size, shuffle=False, collate_fn=pad_collate)
 
-    word_embedding_layer = to_device(word_embedding_layer, args)
-    tag_embedding_layer = to_device(tag_embedding_layer, args)
-    pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer).to('cuda:0' if args.cuda else 'cpu')
+    pos_model = POS_from_WordSeq(args, word_embedding_layer, tag_embedding_layer)
     adam_opt = Adam(params=pos_model.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
-    for name, param in pos_model.named_parameters():
+    for name, param in pos_model.named_parameters(): # move everything to GPU here
+        param.to('cuda:0' if args.cuda else 'cpu')
         if param.requires_grad:
-            print(name)
+            print(f"need gradient {name}")
+        else:
+            print(f"does not need gradient {name}")
 
     train_loss_buffer = []
     validate_loss_buffer = []
@@ -126,10 +137,12 @@ def main(args):
         torch.save(pos_model.state_dict(), os.path.join(args.save_folder, hyper_parameters, "ckpt_{}.pt".format(e)))
         # print("Unk embedding {}".format(pos_model.encoder.word_embedding_layer.unk_parameter))
 
+    test_loss = routine(test_loader, pos_model, optimizer=None)
     plt.plot(train_loss_buffer)
     plt.plot(validate_loss_buffer)
+    plt.scatter(args.epochs - 1, test_loss, marker="^", c='k')
     plt.xticks([i for i in range(args.epochs)])
-    plt.legend(["Train_loss", "Valid_loss"])
+    plt.legend(["Train_loss", "Valid_loss", "Test_loss"])
     plt.savefig("loss.png")
     plt.close()
 
