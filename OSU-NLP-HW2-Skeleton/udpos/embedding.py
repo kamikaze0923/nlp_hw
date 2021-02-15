@@ -49,16 +49,16 @@ def create_glove_corpus_and_embeddings(data_dir="glove_data", dim=50):
         embeddings_word2idx[k] = i + len([UNK_IDX, PAD_INPUT_WORD_IDX]) # leave the 0 for unknown words, 1 for pad words
         embedding_arrays.append(v)
 
-    return embeddings_word2idx, np.array(embedding_arrays)
+    return embeddings_word2idx, torch.FloatTensor(embedding_arrays)
 
 class Glove_Embedding_Layer(torch.nn.Module):
 
     def __init__(self, embedding_tensor):
         super().__init__()
-        self.embedding_tensor = torch.nn.Parameter(torch.FloatTensor(embedding_tensor), requires_grad=False)
-        self.unk_parameter = torch.nn.Parameter(torch.zeros(size=(1, self.embedding_tensor.size()[1])), requires_grad=True)
-        self.pad_tensor = torch.nn.Parameter(-torch.ones(size=(1, self.embedding_tensor.size()[1])), requires_grad=False)
-        self.layer_matrix = torch.cat([self.unk_parameter, self.pad_tensor, self.embedding_tensor])
+        self.unk_parameter = torch.nn.Parameter(torch.zeros(size=(1, embedding_tensor.size()[1])), requires_grad=True)
+        pad_tensor = torch.nn.Parameter(-torch.ones(size=(1, embedding_tensor.size()[1])), requires_grad=False)
+        embedding_tensor = torch.nn.Parameter(torch.FloatTensor(embedding_tensor), requires_grad=False)
+        self.layer_matrix = torch.cat([self.unk_parameter, pad_tensor, embedding_tensor])
         print("Embedding Layer Created with size {}".format(self.layer_matrix.size()))
 
     def forward(self, idx):
