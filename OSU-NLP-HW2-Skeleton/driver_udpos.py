@@ -16,13 +16,13 @@ parser.add_argument('--batch-size', type=int, default=500,
                     help='Batch size.')
 parser.add_argument('--epochs', type=int, default=200,
                     help='Number of training epochs.')
-parser.add_argument('--learning-rate', type=float, default=1e-4,
+parser.add_argument('--learning-rate', type=float, default=1e-3,
                     help='Learning rate.')
-parser.add_argument('--hidden-dim', type=int, default=64,
+parser.add_argument('--hidden-dim', type=int, default=512,
                     help='Number of hidden units in LSTM.')
 parser.add_argument('--lstm-layers', type=int, default=1,
                     help='Number of hidden units in LSTM.')
-parser.add_argument('--embedding-dim', type=int, default=50,
+parser.add_argument('--embedding-dim', type=int, default=300,
                     help='Dimensionality of embedding.')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Disable CUDA training.')
