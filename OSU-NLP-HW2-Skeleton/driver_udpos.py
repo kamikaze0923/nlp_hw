@@ -12,11 +12,11 @@ import matplotlib
 matplotlib.use('Agg')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch-size', type=int, default=400,
+parser.add_argument('--batch-size', type=int, default=600,
                     help='Batch size.')
 parser.add_argument('--epochs', type=int, default=100,
                     help='Number of training epochs.')
-parser.add_argument('--learning-rate', type=float, default=1e-3,
+parser.add_argument('--learning-rate', type=float, default=1e-4,
                     help='Learning rate.')
 parser.add_argument('--hidden-dim', type=int, default=512,
                     help='Number of hidden units in LSTM.')
