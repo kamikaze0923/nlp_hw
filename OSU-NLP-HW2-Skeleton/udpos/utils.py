@@ -11,8 +11,8 @@ def batch_index_select_2d(matrix_to_select, batch_idx):
     B, _ = batch_idx.size()
     matrix_to_select = matrix_to_select.unsqueeze(0).expand(B, -1, -1) # N x D -> B x N x D
     batch_idx = batch_idx.unsqueeze(-1).expand(-1, -1, D) # B x M -> B x M x D
-    print(matrix_to_select.device())
-    print(batch_idx.device())
+    print(matrix_to_select.device)
+    print(batch_idx.device)
     return torch.gather(matrix_to_select, dim=1, index=batch_idx) # B x M x D
 
 def one_hot_vector(categories, hot_index):
