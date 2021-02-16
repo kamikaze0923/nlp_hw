@@ -16,12 +16,14 @@ def batch_index_select_2d(matrix_to_select, batch_idx):
     # print("\n")
     return torch.gather(matrix_to_select, dim=1, index=batch_idx) # B x M x D
 
-def one_hot_vector(categories, hot_index):
+
+def to_device(foo, args):
     """
-    :param categories: an integer of total categories/length of the one_hot vector
-    :param hot_index: an integer indicating the one_hot index
-    :return: torch.FloatTensor in shape (C,) C is the number of classes
+    :param foo: could be torch.tensor or torch.nn.Module (anything can use .to to move the GPU/CPU)
+    :param args: use args.cuda to move the foo
+    :return: moved foo
     """
-    one_hot = torch.zeros(size=(categories, ), dtype=torch.float32)
-    one_hot[hot_index] = 1
-    return one_hot
+    if args.cuda:
+        return foo.to("cuda:0") # coulde be torhc
+    else:
+        return foo.to("cpu")

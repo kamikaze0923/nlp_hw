@@ -26,7 +26,7 @@ def create_torch_UDPOS_dataset_and_embedding_layer(args, do_visualize=False):
     tag_names = create_pos_dict(all_datasets)
     embeddings_word2idx, embedding_arrays = create_glove_corpus_and_embeddings(dim=args.embedding_dim)
 
-    datasets = [UDPOS_pytoch_dataset(d, embeddings_word2idx, tag_names) for d in all_datasets]
+    datasets = [UDPOS_pytoch_dataset(d, embeddings_word2idx, tag_names, args) for d in all_datasets]
     word_embedding_layer = Glove_Embedding_Layer(embedding_arrays)
     tag_embedding_layer = POS_Embedding_Layer(tag_names)
 
@@ -71,13 +71,19 @@ def create_pos_dict(datasets, do_histogram=True):
 
 class UDPOS_pytoch_dataset(Dataset):
 
-    def __init__(self, udpos_data, np_embedding_word2idx, tag_label):
+    def __init__(self, udpos_data, np_embedding_word2idx, tag_label, args):
         """
         :param udpos_data: the UDPOS dataset
         :param np_embedding_dict: the dictionary maps words in corpus to its index of the embedding array
         :param tag_label: the dictionary maps speech tags to its index
+        :param args: use the arguments the args to decide if the program is in debug mode or not
         """
-        self.data = udpos_data
+
+        if args.debug:
+            self.data = udpos_data[:args.debug_dataset_size]
+        else:
+            self.data = udpos_data
+
         self.np_embedding_word2idx = np_embedding_word2idx
         self.tag_label = tag_label
 
