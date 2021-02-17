@@ -110,7 +110,7 @@ if __name__ == "__main__":
     if args.debug:
         args.batch_size = 100
         args.epochs = 100
-        args.hidden_dim = 64
+        args.hidden_dim = 512
         args.embedding_dim = 300
         args.debug_dataset_size = 2000
 
