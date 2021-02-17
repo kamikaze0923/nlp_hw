@@ -42,13 +42,14 @@ def plot_loss(working_dir, buffer, test_result, best_acc_result, args):
     plt.savefig(os.path.join(working_dir, "accuracy.png"))
     plt.close()
 
-def plot_confusion_matrix(m, label_dict, name):
+def plot_confusion_matrix(m, label_dict, save_dir, epoch):
     index = [tag for tag, _ in sorted(label_dict.items(), key=lambda x: x[1])] # sort according to the value(index in matrix)
     assert m.shape[0] == len(index)
     df_cm = pd.DataFrame(m, index=index, columns=index)
     plt.figure(figsize=(8, 6))
     sn.heatmap(df_cm, annot=True, fmt='d')
-    plt.savefig(name)
+    plt.title(f"Epcoch: {epoch}")
+    plt.savefig(os.path.join(save_dir, f"{epoch}.png"))
     plt.close()
 
 

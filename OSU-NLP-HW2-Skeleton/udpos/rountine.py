@@ -18,7 +18,7 @@ def pad_collate(batch, args):
 
     return xx_pad, xx_pad_reverse, yy_pad, to_device(torch.LongTensor(x_lens), args)
 
-def routine_loss(logits, label, x_lens, confusion_matrix, criterion=torch.nn.BCELoss(reduction='none')):
+def routine_loss(logits, label, x_lens, criterion=torch.nn.CrossEntropyLoss(reduction='sum')):
     """
     :param logits: B x T x TD(tag dimension)
     :param label: B x T
@@ -26,24 +26,24 @@ def routine_loss(logits, label, x_lens, confusion_matrix, criterion=torch.nn.BCE
     :param criterion: the pytorch CrossEntropyLoss
     :return: a single loss tensor
     """
-    pred_label = logits.argmax(dim=-1, keepdim=True)
-    label_one_hot = torch.zeros(size=logits.size(), device=pred_label.device)
-    for b, label_seq in enumerate(label):
-        for t, l in enumerate(label_seq):
-            label_one_hot[b,t,l] = 1
-    loss = criterion(logits, label_one_hot).sum()
 
+    loss = criterion(logits.permute(0, 2, 1) , label).sum() # label need to be in 2nd dimension to calculate loss
+    confusion_matrix = np.zeros(shape=(logits.size()[-1], logits.size()[-1]), dtype=np.int32)
+    pred_label = logits.argmax(dim=-1, keepdim=True)
     pred_label = pred_label.squeeze(-1)
     n_words, correct_words = 0, 0
     for i, l in enumerate(x_lens):
         n_words += l + 1
         valid_pred, valid_label = pred_label[i,:l+1], label[i,:l+1]
-        for a, b in zip(valid_pred, valid_label):
-            # print(a,b)
-            confusion_matrix[a, b] += 1
+        # for a, b in zip(valid_pred, valid_label):
+        #     # print(a,b)
+        #     confusion_matrix[a, b] += 1
+        stats = np.zeros(shape=confusion_matrix.shape, dtype=np.int32)
+        np.put(stats, list(zip(valid_pred, valid_label)), 1)
+        confusion_matrix += stats
         flag = torch.eq(valid_label, valid_pred)
         correct_words += torch.sum(flag)
-    return loss, correct_words, n_words
+    return loss, correct_words, n_words, confusion_matrix
 
 
 def routine(dataloader, model, optimizer=None):
@@ -51,7 +51,6 @@ def routine(dataloader, model, optimizer=None):
     avg_loss = 0
     correct_words = 0
     n_words = 0
-    confusion_matrix = np.zeros(shape=(model.decoder.output_size, model.decoder.output_size), dtype=np.int32)
     for i, batch in enumerate(dataloader):
         print("\r {}/{} batch is training/validating with batch size {} ".format(
             i, dataloader.__len__(), dataloader.batch_size), end="", flush=True
@@ -61,7 +60,7 @@ def routine(dataloader, model, optimizer=None):
         if optimizer:
             optimizer.zero_grad()
             out = model(batch)
-            loss, batch_correct_word, batch_n_word = routine_loss(out, yy_pad[:,1:], x_lens, confusion_matrix)# match labels except <SOS>
+            loss, batch_correct_word, batch_n_word, confusion_matrix = routine_loss(out, yy_pad[:,1:], x_lens)# match labels except <SOS>
             loss.backward()
             # model.encoder.word_embedding_layer.pad_tensor.grad = None
             # model.encoder.word_embedding_layer.embedding_tensor.grad = None
@@ -69,7 +68,7 @@ def routine(dataloader, model, optimizer=None):
         else:
             with torch.no_grad():
                 out = model(batch)
-                loss, batch_correct_word, batch_n_word = routine_loss(out, yy_pad[:, 1:], x_lens, confusion_matrix)# match labels except <SOS>
+                loss, batch_correct_word, batch_n_word, confusion_matrix = routine_loss(out, yy_pad[:, 1:], x_lens)# match labels except <SOS>
 
         avg_loss += loss.item()
         correct_words += batch_correct_word

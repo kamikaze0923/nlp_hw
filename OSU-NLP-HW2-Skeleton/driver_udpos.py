@@ -39,11 +39,10 @@ def main(args):
     ckpt_dir = os.path.join(hyper_parameters, args.save_folder)
     os.makedirs(ckpt_dir, exist_ok=True)
     animate_dir = "animation"
-    train_image_dir = os.path.join(animate_dir, "train")
-    valid_image_dir = os.path.join(animate_dir, "valid")
+    train_image_dir = os.path.join(hyper_parameters, animate_dir, "train")
+    valid_image_dir = os.path.join(hyper_parameters, animate_dir, "valid")
     for dir in [train_image_dir, valid_image_dir]:
         os.makedirs(dir, exist_ok=True)
-
 
     info_buffer = Training_Info_Buffer()
     best_acc = 0
@@ -51,9 +50,9 @@ def main(args):
     for e in range(args.epochs):
         print("Epoch: {}".format(e))
         train_loss, train_acc, train_word_stats, cfs_MT = routine(train_loader, pos_model, optimizer=adam_opt)
-        plot_confusion_matrix(cfs_MT, label_dict=datasets[0].tag_label, name=os.path.join(train_image_dir, f"{e}.png"))
+        plot_confusion_matrix(cfs_MT, label_dict=datasets[0].tag_label, save_dir=train_image_dir, epoch=e)
         valid_loss, valid_acc, valid_word_stats, cfs_MV = routine(valid_loader, pos_model, optimizer=None)
-        plot_confusion_matrix(cfs_MV, label_dict=datasets[1].tag_label, name=os.path.join(valid_image_dir, f"{e}.png"))
+        plot_confusion_matrix(cfs_MV, label_dict=datasets[1].tag_label, save_dir=valid_image_dir, epoch=e)
 
         print("Epoch train loss: {:.5f}, train acc: {:.3f}({}/{}), valid loss: {:.5f}, valid acc: {:.3f}({}/{})".format(
             train_loss, train_acc, train_word_stats[0], train_word_stats[1],
