@@ -80,7 +80,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch-size', type=int, default=500,
                         help='Batch size.')
-    parser.add_argument('--epochs', type=int, default=1000,
+    parser.add_argument('--epochs', type=int, default=200,
                         help='Number of training epochs.')
     parser.add_argument('--learning-rate', type=float, default=1e-3,
                         help='Learning rate.')
