@@ -7,9 +7,9 @@ class POS_from_WordSeq(torch.nn.Module):
     an encoder-decoder architecture to transform the word sequence to the part-of-speech label
     """
 
-    def __init__(self, args, word_embedding_layer, tag_embedding_layer, use_encoder=False):
+    def __init__(self, args, word_embedding_layer, tag_embedding_layer):
         super().__init__()
-        self.use_encoder = use_encoder
+        self.use_encoder = args.use_encoder
         if self.use_encoder:
             self.encoder = Bidirectional_LSTM_Encoder(
                 word_embedding_layer, word_embedding_layer.layer_matrix.size()[1],
@@ -158,7 +158,7 @@ class LSTM_Cell_Decoder(torch.nn.Module):
             if i < max(x_lens):
                 word_emb = self.word_embedding_layer(xx_pad[:, [i]]) # select according to time but keep the time dimension
             else:
-                select_pad_embedding = torch.LongTensor(size=(xx_pad[:, [0]].size()), device=xx_pad.device).fill_(PAD_INPUT_WORD_IDX)
+                select_pad_embedding = torch.zeros(size=(xx_pad[:, [0]].size()), device=xx_pad.device, dtype=torch.int64).fill_(PAD_INPUT_WORD_IDX)
                 word_emb = self.word_embedding_layer(select_pad_embedding)
             feedin_emb = tag_emb
             h_t, h_t_rev, c_0, c_0_rev = self.lstm_cell(feedin_emb[:,0,:], word_emb[:,0,:], h_t, h_t_rev, c_0, c_0_rev)
@@ -210,15 +210,16 @@ class Multilayer_LSTM_Cells(torch.nn.Module):
         :param c_t_rev: previous memory state of the reversed sequence
         :return: a stack of all hidden states and memory states, depending on how many layers the lstm has
         """
-        feedin = sos
-        feedin_rev = sos
+
+        feedin = torch.cat([sos, one_step_word_emb], dim=1)
+        feedin_rev = torch.cat([sos, one_step_word_emb], dim=1)
+        # feedin = one_step_word_emb
+        # feedin_rev = one_step_word_emb
         h_t_out_collector, h_t_out_rev_collector = [], []
         c_t_out_collector, c_t_out_rev_collector = [], []
         for cell, cell_rev, one_h_t, one_h_t_rev, one_c_t, one_c_t_rev in zip(
                 self.lstm_cells, self.lstm_cells_rev, h_t, h_t_rev, c_t, c_t_rev,
         ): # similuate multilayer lstm feed-in for one single step and return the output
-            feedin = torch.cat([feedin, one_step_word_emb], dim=1)
-            feedin_rev = torch.cat([feedin_rev, one_step_word_emb], dim=1)
             h_t_out, c_t_out = cell(feedin, (one_h_t, one_c_t))
             h_t_out_rev, c_t_out_rev = cell_rev(feedin_rev, (one_h_t_rev, one_c_t_rev))
 

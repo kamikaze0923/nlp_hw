@@ -2,11 +2,11 @@ from torch.utils.data import DataLoader
 import torch
 from torch.optim import Adam
 import argparse
-import os
+import os, shutil
 from udpos.model import POS_from_WordSeq
 from udpos.dataset import create_torch_UDPOS_dataset_and_embedding_layer
 from udpos.rountine import routine, pad_collate
-from udpos.visualize import plot_loss, Training_Info_Buffer
+from udpos.visualize import plot_loss, plot_confusion_matrix, to_gif, Training_Info_Buffer
 
 
 def main(args):
@@ -28,14 +28,33 @@ def main(args):
             print(f"does not need gradient {param.device} {name}")
 
     training_info = f"{args.seed}-{args.batch_size}-{args.epochs}-{args.learning_rate}"
-    model_info = f"{args.hidden_dim}-{args.lstm_layers}-{args.embedding_dim}"
+    model_info = f"{args.hidden_dim}-{args.lstm_layers}-{args.embedding_dim}-{args.use_encoder}"
     hyper_parameters = f"bi_lstm-" + training_info + "-" + model_info
+
+    try:
+        shutil.rmtree(hyper_parameters)
+    except:
+        pass
+
+    ckpt_dir = os.path.join(hyper_parameters, args.save_folder)
+    os.makedirs(ckpt_dir, exist_ok=True)
+    animate_dir = "animation"
+    train_image_dir = os.path.join(animate_dir, "train")
+    valid_image_dir = os.path.join(animate_dir, "valid")
+    for dir in [train_image_dir, valid_image_dir]:
+        os.makedirs(dir, exist_ok=True)
+
+
     info_buffer = Training_Info_Buffer()
-    os.makedirs(os.path.join(args.save_folder, hyper_parameters), exist_ok=True)
+    best_acc = 0
+    best_epoch = 0
     for e in range(args.epochs):
         print("Epoch: {}".format(e))
-        train_loss, train_acc, train_word_stats = routine(train_loader, pos_model, optimizer=adam_opt)
-        valid_loss, valid_acc, valid_word_stats = routine(valid_loader, pos_model, optimizer=None)
+        train_loss, train_acc, train_word_stats, cfs_MT = routine(train_loader, pos_model, optimizer=adam_opt)
+        plot_confusion_matrix(cfs_MT, label_dict=datasets[0].tag_label, name=os.path.join(train_image_dir, f"{e}.png"))
+        valid_loss, valid_acc, valid_word_stats, cfs_MV = routine(valid_loader, pos_model, optimizer=None)
+        plot_confusion_matrix(cfs_MV, label_dict=datasets[1].tag_label, name=os.path.join(valid_image_dir, f"{e}.png"))
+
         print("Epoch train loss: {:.5f}, train acc: {:.3f}({}/{}), valid loss: {:.5f}, valid acc: {:.3f}({}/{})".format(
             train_loss, train_acc, train_word_stats[0], train_word_stats[1],
             valid_loss, valid_acc, valid_word_stats[0], valid_word_stats[1])
@@ -44,18 +63,25 @@ def main(args):
         info_buffer.validate_loss_buffer.append(valid_loss)
         info_buffer.train_acc_buffer.append(train_acc)
         info_buffer.validate_acc_buffer.append(valid_acc)
+        if valid_acc > best_acc:
+            best_acc = valid_acc
+            best_epoch = e
 
-        # torch.save(pos_model.state_dict(), os.path.join(args.save_folder, hyper_parameters, "ckpt_{}.pt".format(e)))
+        if not args.debug and False:
+            torch.save(pos_model.state_dict(), os.path.join(ckpt_dir, "ckpt_{}.pt".format(e)))
         # print("Unk embedding {}".format(pos_model.encoder.word_embedding_layer.unk_parameter))
 
-    plot_loss(info_buffer, routine(test_loader, pos_model, optimizer=None), args)
+    test_loss, test_acc, _, _ = routine(test_loader, pos_model, optimizer=None)
+    plot_loss(hyper_parameters, info_buffer, (test_loss, test_acc), (best_acc, best_epoch), args)
+    to_gif(hyper_parameters, train_image_dir, valid_image_dir, name="cfm")
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch-size', type=int, default=500,
                         help='Batch size.')
-    parser.add_argument('--epochs', type=int, default=200,
+    parser.add_argument('--epochs', type=int, default=1000,
                         help='Number of training epochs.')
     parser.add_argument('--learning-rate', type=float, default=1e-3,
                         help='Learning rate.')
@@ -65,6 +91,8 @@ if __name__ == "__main__":
                         help='Number of hidden units in LSTM.')
     parser.add_argument('--embedding-dim', type=int, default=300,
                         help='Dimensionality of embedding.')
+    parser.add_argument('--use-encoder', action='store_true', default=False,
+                        help='Using a biLSTM encoder')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='Disable CUDA training.')
     parser.add_argument('--seed', type=int, default=42,
@@ -72,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--save-folder', type=str,
                         default='checkpoints',
                         help='Path to checkpoints.')
-    parser.add_argument('--debug', action='store_true', default=True,
+    parser.add_argument('--debug', action='store_true', default=False,
                         help='Reduce the dataset for faster local debugging')
     parser.add_argument('--debug-dataset-size', type=int, default=20,
                         help='Use a tiny dataset to debug the program first')
@@ -81,17 +109,18 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     if args.debug:
-        args.batch_size = 20
-        args.epochs = 5000
-        args.hidden_dim = 512
-        args.embedding_dim = 300
+        args.batch_size = 2
+        args.epochs = 100
+        args.hidden_dim = 64
+        args.embedding_dim = 50
 
     if args.cuda:
         print("Using GPU")
     else:
         print("Using CPU")
 
-    print(vars(args))
+    for k,v in vars(args).items():
+        print(f"{k}: {v}")
     torch.manual_seed(args.seed)
     main(args)
 
