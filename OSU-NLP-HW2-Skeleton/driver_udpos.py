@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('--save-folder', type=str,
                         default='checkpoints',
                         help='Path to checkpoints.')
-    parser.add_argument('--debug', action='store_true', default=False,
+    parser.add_argument('--debug', action='store_true', default=True,
                         help='Reduce the dataset for faster local debugging')
     parser.add_argument('--debug-dataset-size', type=int, default=20,
                         help='Use a tiny dataset to debug the program first')
@@ -108,10 +108,11 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     if args.debug:
-        args.batch_size = 2
+        args.batch_size = 100
         args.epochs = 100
         args.hidden_dim = 64
-        args.embedding_dim = 50
+        args.embedding_dim = 300
+        args.debug_dataset_size = 2000
 
     if args.cuda:
         print("Using GPU")
