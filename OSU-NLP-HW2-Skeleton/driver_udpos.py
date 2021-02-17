@@ -92,7 +92,7 @@ if __name__ == "__main__":
                         help='Dimensionality of embedding.')
     parser.add_argument('--use-encoder', action='store_true', default=False,
                         help='Using a biLSTM encoder')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
+    parser.add_argument('--no-cuda', action='store_true', default=True,
                         help='Disable CUDA training.')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed (default: 42).')

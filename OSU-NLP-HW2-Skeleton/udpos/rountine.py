@@ -39,8 +39,10 @@ def routine_loss(logits, label, x_lens, criterion=torch.nn.CrossEntropyLoss(redu
         #     # print(a,b)
         #     confusion_matrix[a, b] += 1
         stats = np.zeros(shape=confusion_matrix.shape, dtype=np.int32)
-        np.put(stats, list(zip(valid_pred, valid_label)), 1)
-        confusion_matrix += stats
+        index = [i for i in zip(valid_pred.detach().cpu().numpy(), valid_label.detach().cpu().numpy())]
+        index = [(i*stats.shape[0], i*stats.shape[0]+j) for i,j in index]
+        np.put(stats, index, 1) # only work for 1d case
+        confusion_matrix = np.add(confusion_matrix, stats)
         flag = torch.eq(valid_label, valid_pred)
         correct_words += torch.sum(flag)
     return loss, correct_words, n_words, confusion_matrix
