@@ -53,6 +53,7 @@ def routine(dataloader, model, optimizer=None):
     avg_loss = 0
     correct_words = 0
     n_words = 0
+    confusion_matrix = None
     for i, batch in enumerate(dataloader):
         print("\r {}/{} batch is training/validating with batch size {} ".format(
             i, dataloader.__len__(), dataloader.batch_size), end="", flush=True

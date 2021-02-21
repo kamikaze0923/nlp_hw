@@ -108,11 +108,11 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     if args.debug:
-        args.batch_size = 20
+        args.batch_size = 2
         args.epochs = 200
         args.hidden_dim = 512
         args.embedding_dim = 50
-        args.debug_dataset_size = 200
+        args.debug_dataset_size = 20
 
     if args.cuda:
         print("Using GPU")
