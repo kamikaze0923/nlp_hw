@@ -92,31 +92,30 @@ def main():
     )
     model = Seq2Seq(enc, dec, dev).to(dev)
 
-
     criterion = nn.CrossEntropyLoss(ignore_index = TRG.vocab.stoi[TRG.pad_token])
-    if not args.eval:
-        print("\n")
-        logging.info("Training the model")
-
-        # Set up cross-entropy loss but ignore the pad token when computing it
-        
-        optimizer = optim.Adam(model.parameters())
-
-        best_valid_loss = float('inf')
-
-        for epoch in range(10):
-
-            train_loss = train(model, train_iterator, optimizer, criterion, epoch+1)
-            valid_loss = evaluate(model, valid_iterator, criterion, epoch+1)
-
-            if valid_loss < best_valid_loss:
-                best_valid_loss = valid_loss
-                torch.save(model.state_dict(), args.attn+'-best-checkpoint.pt')
-            
-            logging.info(f'Epoch: {epoch+1:02}\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-            logging.info(f'Epoch: {epoch+1:02}\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
-
-    model.load_state_dict(torch.load(args.attn+'-best-checkpoint.pt'))
+    # if not args.eval:
+    #     print("\n")
+    #     logging.info("Training the model")
+    #
+    #     # Set up cross-entropy loss but ignore the pad token when computing it
+    #
+    #     optimizer = optim.Adam(model.parameters())
+    #
+    #     best_valid_loss = float('inf')
+    #
+    #     for epoch in range(10):
+    #
+    #         train_loss = train(model, train_iterator, optimizer, criterion, epoch+1)
+    #         valid_loss = evaluate(model, valid_iterator, criterion, epoch+1)
+    #
+    #         if valid_loss < best_valid_loss:
+    #             best_valid_loss = valid_loss
+    #             torch.save(model.state_dict(), args.attn+'-best-checkpoint.pt')
+    #
+    #         logging.info(f'Epoch: {epoch+1:02}\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
+    #         logging.info(f'Epoch: {epoch+1:02}\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+    #
+    # model.load_state_dict(torch.load(args.attn+'-best-checkpoint.pt'))
 
 
     # Test model
@@ -165,8 +164,8 @@ class SingleQueryScaledDotProductAttention(nn.Module):
         key = self.transpose_for_scores(self.key(encoder_outputs)) # B x T x Kq_dim
         query = self.transpose_for_scores(self.query(hidden).unsqueeze(0)) # B x 1 x Kq_dim
         alpha = torch.matmul(query, key.transpose(-1, -2)).softmax(dim=-1) # B x 1 x T
-        attended_val = torch.matmul(alpha, value).squeeze() # B x Enc_hidden*2
-        alpha = alpha.squeeze()
+        attended_val = torch.matmul(alpha, value).squeeze(1) # B x Enc_hidden*2, cannot squeeze the batch dimension
+        alpha = alpha.squeeze(1) # B x T, cannot squeeze the batch dimension
         assert alpha.shape == (hidden.shape[0], encoder_outputs.shape[0]) # Batch x Time
         assert attended_val.shape == (hidden.shape[0], encoder_outputs.shape[2]) # Batch x Enc_hidden*2
         return attended_val, alpha
