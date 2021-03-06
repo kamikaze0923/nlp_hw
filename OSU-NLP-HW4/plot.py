@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 
 train_loss_np = np.zeros(shape=(3, 3, 100))
 valid_loss_np = np.zeros(shape=(3, 3, 100))
+test_loss_np = np.zeros(shape=(3, 3, 1))
 
 att_type = ['sdp', 'mean', 'none']
 colors = ['r', 'b', 'g']
@@ -31,6 +32,12 @@ for i, t in enumerate(att_type):
         train_loss_np[i, n, :] = train_losses
         valid_loss_np[i, n, :] = valid_losses
 
+        test_losses = list(map(
+            lambda l: float(find_between(l, 'Loss:', '|')), filter(lambda l: "Test" in l, ls)
+        ))
+        assert len(test_losses) == 1
+        test_loss_np[i, n, :] = test_losses
+
     x = np.arange(0, 100)
     y = np.mean(train_loss_np[i], axis=0)
     err = np.std(train_loss_np[i], axis=0)
@@ -38,6 +45,8 @@ for i, t in enumerate(att_type):
     y = np.mean(valid_loss_np[i], axis=0)
     err = np.std(valid_loss_np[i], axis=0)
     plt.errorbar(x=x, y=y, yerr=err, linestyle='dashed', label=f"{t}-validation", color=colors[i])
+    plt.scatter(x=[100], y=np.mean(test_loss_np[i]), marker="^", label=f"{t}-test", color=colors[i])
+
 
 plt.xlabel("Epoch")
 plt.ylabel("Loss")

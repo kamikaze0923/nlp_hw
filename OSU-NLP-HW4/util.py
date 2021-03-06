@@ -7,12 +7,12 @@ from torchtext.data.metrics import bleu_score
 ##########################################################################################
 # Utility Functions
 ##########################################################################################
-def argmax_decoding(model, hidden, encoder_outputs, trg_field, attentions, max_len):
+def argmax_decoding(model, hidden, encoder_outputs, trg_field, attentions):
     trg_indexes = [trg_field.vocab.stoi[trg_field.init_token]]
 
     attentions = attentions.clone()
 
-    for i in range(max_len):
+    for i in range(attentions.size()[0]):
 
         trg_tensor = torch.LongTensor([trg_indexes[-1]]).to(hidden.device)
 
@@ -33,7 +33,7 @@ def argmax_decoding(model, hidden, encoder_outputs, trg_field, attentions, max_l
     return trg_tokens[1:], attentions[:len(trg_tokens)-1]
 
 
-def beam_search_decoding(model, hidden, encoder_outputs, trg_field, attention_buffer, max_len, beam_size):
+def beam_search_decoding(model, hidden, encoder_outputs, trg_field, attention_buffer, beam_size):
     all_beam_states = [
         DecodingState(
             init_sentence=[trg_field.init_token],
@@ -90,11 +90,11 @@ class DecodingState:
                     self.sentence + [w], self.score + torch.log(pred_token_top_k[i]).item(),
                     gru_state, self.trg_field, self.attention_buffer
                 ) for i, w in enumerate(pred_words)
-            ]
+            ] # return a list sorted candidates can result in a more efficient picking top-k strategy
 
     @property
     def finished_flag(self):
-        return self.sentence[-1] == self.trg_field.eos_token or len(self.sentence) == self.attention_buffer.size()[0]
+        return self.sentence[-1] == self.trg_field.eos_token or len(self.sentence) - 1 == self.attention_buffer.size()[0]
         # self.attention_buffer.size()[0] = max_len
 
 
@@ -121,9 +121,17 @@ def translate_sentence(sentence, src_field, trg_field, model, device, max_len = 
 
     attention_buffer = torch.zeros(max_len, 1, len(src_indexes)).to(device)
     if not beam_size:
-        return argmax_decoding(model, hidden, encoder_outputs, trg_field, attention_buffer, max_len)
+        trg_tokens, attentions = argmax_decoding(model, hidden, encoder_outputs, trg_field, attention_buffer)
+        trg_tokens_check, attentions_check = beam_search_decoding(
+            model, hidden, encoder_outputs, trg_field, attention_buffer, beam_size=1
+        )
+        if " ".join(trg_tokens) != " ".join(trg_tokens_check):
+            print(trg_tokens, len(trg_tokens))
+            print(trg_tokens_check, len(trg_tokens_check))
+            raise ValueError("Beam search discrepancy!")
+        return trg_tokens, attentions
     else:
-        return beam_search_decoding(model, hidden, encoder_outputs, trg_field, attention_buffer, max_len, beam_size)
+        return beam_search_decoding(model, hidden, encoder_outputs, trg_field, attention_buffer, beam_size)
 
 
 def save_attention_plot(sentence, translation, attention, index):
@@ -151,7 +159,7 @@ def save_attention_plot(sentence, translation, attention, index):
 
 
 
-def calculate_bleu(data, src_field, trg_field, model, device, max_len = 50):
+def calculate_bleu(data, src_field, trg_field, model, device, max_len = 50, beam_size=0):
 
     trgs = []
     pred_trgs = []
@@ -161,7 +169,7 @@ def calculate_bleu(data, src_field, trg_field, model, device, max_len = 50):
         src = vars(datum)['src']
         trg = vars(datum)['trg']
 
-        pred_trg, _ = translate_sentence(src, src_field, trg_field, model, device, max_len)
+        pred_trg, _ = translate_sentence(src, src_field, trg_field, model, device, max_len, beam_size=beam_size)
 
         #cut off <eos> token
         pred_trg = pred_trg[:-1]

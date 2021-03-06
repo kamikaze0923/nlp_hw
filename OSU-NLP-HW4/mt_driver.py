@@ -49,7 +49,7 @@ def main(ith_run=0, att="sdp"):
     parser.add_argument('--epoch', type=int, default=100,
                         help='Number of training epochs.')
     parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--beam_size', type=int, default=0)
+    parser.add_argument('--beam_size', type=int, default=5)
 
     args = parser.parse_args()
     if not args.eval:
@@ -139,7 +139,7 @@ def main(ith_run=0, att="sdp"):
     print("\n")
     logging.info("Running test evaluation:")
     test_loss = evaluate(model, test_iterator, criterion, 0)
-    bleu = calculate_bleu(test_data, SRC, TRG, model, dev)
+    bleu = calculate_bleu(test_data, SRC, TRG, model, dev, beam_size=args.beam_size)
     logging.info(f'| Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f} | Test BLEU {bleu*100:.2f}')
 
     random.seed(args.seed)
@@ -158,6 +158,8 @@ def main(ith_run=0, att="sdp"):
         save_attention_plot(src, translation, attention, example_id)
 
     print("\n")
+    if args.eval:
+        exit(0)
     
 
 if __name__ == "__main__":
